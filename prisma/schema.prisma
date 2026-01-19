@@ -1,0 +1,164 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(USER)
+  accounts      Account[]
+  sessions      Session[]
+  savedIdeas    SavedIdea[]
+  collections   Collection[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Idea {
+  id          String   @id @default(uuid())
+  title       String
+  summary     String?  @db.Text
+  source      SourceType
+  sourceUrl   String   @unique
+  sourceId    String?
+  author      String?
+  score       Float    @default(0)
+  metrics     Json?    // { upvotes: number, comments: number, etc }
+  status      IdeaStatus @default(NEW)
+  hash        String   // dedupe fingerprint
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tags        Tag[]
+  savedBy     SavedIdea[]
+  inCollections CollectionItem[]
+}
+
+enum SourceType {
+  REDDIT
+  HN
+  PRODUCTHUNT
+  WEB
+  MANUAL
+}
+
+enum IdeaStatus {
+  NEW
+  REVIEWED
+  ARCHIVED
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  ideas     Idea[]
+}
+
+model SavedIdea {
+  id        String   @id @default(cuid())
+  userId    String
+  ideaId    String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ideaId])
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CollectionItem[]
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  ideaId       String
+  createdAt    DateTime   @default(now())
+  
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  idea         Idea       @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, ideaId])
+}
+
+model SourceConfig {
+  id        String     @id @default(cuid())
+  source    SourceType @unique
+  enabled   Boolean    @default(true)
+  apiKey    String?
+  apiSecret String?
+  lastRunAt DateTime?
+  lastError String?    @db.Text
+}
+
+model JobRun {
+  id        String    @id @default(cuid())
+  type      JobType   @default(INGEST)
+  status    JobStatus
+  stats     Json?     // { added: 10, updated: 5, skipped: 2, errors: 0 }
+  startedAt DateTime  @default(now())
+  finishedAt DateTime?
+  error     String?   @db.Text
+}
+
+enum JobType {
+  INGEST
+}
+
+enum JobStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}

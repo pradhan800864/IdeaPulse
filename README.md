@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IdeaPulse
+
+IdeaPulse is a production-grade startup ideas aggregator dashboard. It collects, deduplicates, and analyzes startup ideas from Reddit, Hacker News, Product Hunt, and web sources.
+
+## Features
+
+- **Ingestion Engine**: Automatically fetches new ideas from configured sources.
+- **Deduplication**: Uses SHA-256 hashing of normalized titles/urls to prevent duplicates.
+- **Auto-Tagging**: Tags ideas based on keywords and (optional) OpenAI integration.
+- **Dashboard**: Visualize trends, active sources, and recent activity.
+- **Management**: Review, archive, and save ideas to collections.
+
+## Tech Stack
+
+- **Framework**: Next.js 14+ (App Router)
+- **Database**: PostgreSQL (Prisma)
+- **Styling**: Tailwind CSS + Shadcn UI
+- **Auth**: NextAuth.js
+- **Jobs**: In-app cron + manual API triggers
 
 ## Getting Started
 
-First, run the development server:
+### 1. Setup Environment
+
+Copy `.env.example` to `.env` and fill in your details:
+
+```bash
+cp .env.example .env
+```
+
+**Required:**
+- `DATABASE_URL`: Connection string to your Postgres DB (Supabase Transaction Pooler recommended).
+- `DIRECT_URL`: Direct connection string (Supabase Session Mode).
+- `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32`.
+
+### 2. Install & Seed
+
+```bash
+npm install
+npx prisma generate
+npx prisma db push  # or prisma migrate dev
+npx prisma db seed  # Creates admin/demo users
+```
+
+**Default Users:**
+- Admin: `admin@example.com` / `admin123`
+- Demo: `demo@example.com` / `demo123`
+
+### 3. Run Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app is ready for Vercel. Ensure you set the Environment Variables in your Vercel project settings.
 
-## Learn More
+### cron jobs
+The ingestion runs every 30 minutes if the server is running (Node runtime). For Vercel, you should call `/api/jobs/ingest` using Vercel Cron Config or an external cron service (e.g. GitHub Actions, cron-job.org) secured with `JOB_SECRET`.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
